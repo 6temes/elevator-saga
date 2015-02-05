@@ -1,76 +1,98 @@
 // http://play.elevatorsaga.com/#challenge=5
 
-{
-    init: function(elevators, floors) {
+game = {
+    init: function (elevators, floors) {
 
-        function getClosestFloor(queue, currentFloor) {
-            var minDistance = 99;
-            var best;
+        function zeroToNToOne(n) {
+            var i,
+                r,
+                res = [];
 
-            queue.forEach(function(floor) {
-
-                var distance;
-                if (floor > currentFloor) {
-                    distance = floor - currentFloor;
+            for (i = 0; i <= (n * 2) - 1; i++) {
+                if (i <= n) {
+                    r = i;
                 } else {
-                    distance = currentFloor - floor;
+                    r = n - (i % n);
                 }
-                if (distance < minDistance) {
-                    best = floor;
-                    minDistance = distance;
-                }
-            });
-
-            return best;
+                res.push(r);
+            }
+            return res;
         }
+
+        var maxFloor = 5;
+
 
         elevators.forEach(manageElevator);
 
-        function manageElevator(el) {
-            function goingUp() {
-                el.goingUpIndicator(true);
-                el.goingDownIndicator(false);
-            }
 
-            function goingDown() {
-                el.goingUpIndicator(false);
-                el.goingDownIndicator(true);
-            }
+        function manageElevator(elevator) {
 
-            var nextFloor = 4;
-            el.goToFloor(5);
-            goingUp();
+            elevator._dir = "";
+            elevator.direction = function (direction) {
+                if (direction === "up") {
+                    this.goingUpIndicator(true);
+                    this.goingDownIndicator(false);
+                    this._dir = "up";
+                } else if (direction === "down") {
+                    this.goingUpIndicator(false);
+                    this.goingDownIndicator(true);
+                    this._dir = "down";
+                } else if (direction === "stop") {
+                    this.goingUpIndicator(true);
+                    this.goingDownIndicator(true);
+                    this._dir = "down";
+                }
+                return this._dir;
+            };
+            elevator.getClosestFloor = function (queue) {
+                var minDistance,
+                    best,
+                    currentFloor = this.currentFloor();
 
-            el.on("idle", function() {
-
-                if (el.getPressedFloors().length > 0) {
-                    var floorQueue = el.getPressedFloors();
-
-                    nextFloor = getClosestFloor(floorQueue, el.currentFloor());
-
-                    if (nextFloor > el.currentFloor()) {
-                        goingUp();
-                    } else {
-                        goingDown();
+                queue.forEach(function (floor) {
+                    var distance = Math.abs(floor - currentFloor);
+                    if (distance < minDistance) {
+                        best = floor;
+                        minDistance = distance;
                     }
+                });
 
-                } else if (el.goingUpIndicator()) {
-                    nextFloor += 1;
-                } else {
-                    nextFloor -= 1;
-                }
-                el.goToFloor(nextFloor);
+                return best;
+            };
 
-                if (el.currentFloor() === 5) {
-                    goingDown();
+            elevator.roam = function () {
+                var nextFloor;
+
+                if (this.direction() !== "up" && this.direction() !== "down") {
+                    if (this.currentFloor() < maxFloor) {
+                        this.direction("up");
+                    } else {
+                        this.direction("down");
+                    }
                 }
-                if (el.currentFloor() === 0) {
-                    goingUp();
+
+                if (this.direction() === "up") {
+                    nextFloor = this.currentFloor() + 1;
+                } else if (this.direction() === "down") {
+                    nextFloor = this.currentFloor() - 1;
                 }
+
+                this.goToFloor(nextFloor);
+
+                if (nextFloor === 0) {
+                    this.direction("up");
+                } else if (nextFloor === maxFloor) {
+                    this.direction("down")
+                }
+            };
+
+            elevator.goToFloor(5);
+            elevator.on("idle", function () {
+                elevator.roam();
             })
         }
     },
-    update: function(dt, elevators, floors) {
+    update: function (dt, elevators, floors) {
         // We normally don't need to do anything here
     }
-}
+};
