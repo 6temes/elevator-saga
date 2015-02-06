@@ -3,27 +3,9 @@
 game = {
     init: function (elevators, floors) {
 
-        function zeroToNToOne(n) {
-            var i,
-                r,
-                res = [];
-
-            for (i = 0; i <= (n * 2) - 1; i++) {
-                if (i <= n) {
-                    r = i;
-                } else {
-                    r = n - (i % n);
-                }
-                res.push(r);
-            }
-            return res;
-        }
-
-        var maxFloor = 5;
-
+        var maxFloor = 4;
 
         elevators.forEach(manageElevator);
-
 
         function manageElevator(elevator) {
 
@@ -40,9 +22,12 @@ game = {
                 } else if (direction === "stop") {
                     this.goingUpIndicator(true);
                     this.goingDownIndicator(true);
-                    this._dir = "down";
+                    this._dir = "";
                 }
                 return this._dir;
+            };
+            elevator.hasPassengers = function () {
+                return elevator.getPressedFloors().length > 0;
             };
             elevator.getClosestFloor = function (queue) {
                 var minDistance,
@@ -51,7 +36,7 @@ game = {
 
                 queue.forEach(function (floor) {
                     var distance = Math.abs(floor - currentFloor);
-                    if (distance < minDistance) {
+                    if (!minDistance || distance < minDistance) {
                         best = floor;
                         minDistance = distance;
                     }
@@ -61,7 +46,7 @@ game = {
             };
 
             elevator.roam = function () {
-                var nextFloor;
+                var nextFloor = this.currentFloor();
 
                 if (this.direction() !== "up" && this.direction() !== "down") {
                     if (this.currentFloor() < maxFloor) {
@@ -85,10 +70,20 @@ game = {
                     this.direction("down")
                 }
             };
+            elevator.moveToClosestDestination = function () {
+                var closestDestination = this.getClosestFloor(this.getPressedFloors());
 
-            elevator.goToFloor(5);
+                this.direction("stop");
+
+                this.goToFloor(closestDestination);
+            };
+
+            elevator.goToFloor(maxFloor);
             elevator.on("idle", function () {
-                elevator.roam();
+                if (this.hasPassengers()) {
+                    this.moveToClosestDestination();
+                }
+                this.roam();
             })
         }
     },
@@ -96,3 +91,21 @@ game = {
         // We normally don't need to do anything here
     }
 };
+
+/*
+ function zeroToNToOne(n) {
+ var i,
+ r,
+ res = [];
+
+ for (i = 0; i <= (n * 2) - 1; i++) {
+ if (i <= n) {
+ r = i;
+ } else {
+ r = n - (i % n);
+ }
+ res.push(r);
+ }
+ return res;
+ }
+ */
